@@ -211,7 +211,7 @@ async function parse_nb(info, line_contents) {
   // todo(simon): implement a test for parsing
   // fixme(simon): maybe clean this code up
   // bug(simon): possible bug description
-  // feature_request(simon): we want some feature X
+  // feature_request(simon)!!!!: display the nota bene's in a nice list in vscode
   let owner_end = line_contents.indexOf(")");
   let owner = line_contents.substring(
     info.column + IDENTIFIERS[info.type].length + 1,

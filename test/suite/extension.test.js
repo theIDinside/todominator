@@ -75,4 +75,13 @@ suite("Extension Test Suite", () => {
       );
     });
   });
+
+  test("Test urgency of feature request NB, is 4", async () => {
+    let TODO_FILE = path.join(PROJECT_ROOT, "src", "todo.js");
+    let nb = new myExtension.NotaBenes();
+    await nb.parse_file(TODO_FILE);
+    return nb.get_feature_requests(TODO_FILE).then((nb) => {
+      assert.strictEqual(4, nb[0].urgency);
+    });
+  });
 });
