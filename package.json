@@ -10,14 +10,40 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:todominator.helloWorld"
+		"onCommand:todominator.parse_workspace",
+		"onCommand:todominator.parse_file",
+		"onView:fileExplorer",
+		"onLanguage:rust",
+		"onLanguage:json",
+		"onLanguage:javascript"
 	],
 	"main": "./extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "todominator.helloWorld",
-				"title": "Hello World"
+				"command": "todominator.parse_workspace",
+				"title": "Scan workspace for todo's (possibly expensive)"
+			},
+			{
+				"command": "todominator.parse_file",
+				"title": "Scan file for todo's"
+			}
+		],
+		"views": {
+			"explorer": [{
+				"id": "todominator",
+				"name": "Todo's in code"
+			}]
+		},
+		"configuration": [
+			{
+				"title": "Todominator settings",
+				"properties": {
+					"todominator.parse_on_save": {
+						"type": "boolean",
+						"default": true
+					}
+				}
 			}
 		]
 	},
