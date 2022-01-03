@@ -1,5 +1,5 @@
+const IDENTIFIERS_REGEX = [/TODO/g, /FIXME/g, /BUG/g, /FEATURE_REQUEST/g];
 const IDENTIFIERS = ["TODO", "FIXME", "BUG", "FEATURE_REQUEST"];
-let hasher = require("crypto").createHash("md5");
 const NotaBeneType = {
   TODO: 0,
   FIXME: 1,
@@ -90,7 +90,7 @@ class NotaBenes {
   constructor() {
     this.#nbs = new Map();
   }
-
+  // feature_request(simon): perhaps; this should be offloaded to native code, that could potentially handle this alot faster, via multi threading
   parse_file(path) {
     const fs = require("fs");
     let previous = this.#nbs.get(path);
@@ -100,7 +100,7 @@ class NotaBenes {
         let promise = new Promise((resolve, reject) => {
           fs.readFile(path, { encoding: "utf8", flag: "r" }, (err, data) => {
             if (err) reject(err);
-            let sum = hasher.update(data);
+            let sum = data.length;
             if (sum != previous_result.hash_sum) {
               resolve(new ParsedFile(parse_file(data), sum));
             } else {
@@ -114,7 +114,7 @@ class NotaBenes {
       let promise = new Promise((resolve, reject) => {
         fs.readFile(path, { encoding: "utf8", flag: "r" }, (err, data) => {
           if (err) reject(err);
-          let sum = hasher.update(data);
+          let sum = data.length;
           resolve(new ParsedFile(parse_file(data), sum));
         });
       });
