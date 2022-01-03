@@ -13,7 +13,7 @@ suite("Extension Test Suite", () => {
   test("Test todo's found is 1", async () => {
     let TODO_FILE = path.join(PROJECT_ROOT, "src", "todo.js");
     let nb = new myExtension.NotaBenes();
-    await nb.parse_file(TODO_FILE);
+    nb.parse_file(TODO_FILE);
 
     // assert.strictEqual(-1, [1, 2, 3].indexOf(5));
     // assert.strictEqual(-1, [1, 2, 3].indexOf(0));
@@ -25,7 +25,7 @@ suite("Extension Test Suite", () => {
   test("Test feature requests found is 1", async () => {
     let TODO_FILE = path.join(PROJECT_ROOT, "src", "todo.js");
     let nb = new myExtension.NotaBenes();
-    await nb.parse_file(TODO_FILE);
+    nb.parse_file(TODO_FILE);
 
     // assert.strictEqual(-1, [1, 2, 3].indexOf(5));
     // assert.strictEqual(-1, [1, 2, 3].indexOf(0));
@@ -37,7 +37,7 @@ suite("Extension Test Suite", () => {
   test("Test fix me's found is 1", async () => {
     let TODO_FILE = path.join(PROJECT_ROOT, "src", "todo.js");
     let nb = new myExtension.NotaBenes();
-    await nb.parse_file(TODO_FILE);
+    nb.parse_file(TODO_FILE);
 
     // assert.strictEqual(-1, [1, 2, 3].indexOf(5));
     // assert.strictEqual(-1, [1, 2, 3].indexOf(0));
@@ -49,7 +49,7 @@ suite("Extension Test Suite", () => {
   test("Test bugs found is 1", async () => {
     let TODO_FILE = path.join(PROJECT_ROOT, "src", "todo.js");
     let nb = new myExtension.NotaBenes();
-    await nb.parse_file(TODO_FILE);
+    nb.parse_file(TODO_FILE);
 
     // assert.strictEqual(-1, [1, 2, 3].indexOf(5));
     // assert.strictEqual(-1, [1, 2, 3].indexOf(0));
@@ -61,7 +61,7 @@ suite("Extension Test Suite", () => {
   test("Test owner is simon of all 4", async () => {
     let TODO_FILE = path.join(PROJECT_ROOT, "src", "todo.js");
     let nb = new myExtension.NotaBenes();
-    await nb.parse_file(TODO_FILE);
+    nb.parse_file(TODO_FILE);
     return nb.get_all_in(TODO_FILE).then(async (parsed_file) => {
       assert.strictEqual(
         true,
@@ -79,7 +79,7 @@ suite("Extension Test Suite", () => {
   test("Test urgency of feature request NB, is 4", async () => {
     let TODO_FILE = path.join(PROJECT_ROOT, "src", "todo.js");
     let nb = new myExtension.NotaBenes();
-    await nb.parse_file(TODO_FILE);
+    nb.parse_file(TODO_FILE);
     return nb.get_feature_requests(TODO_FILE).then((nb) => {
       assert.strictEqual(4, nb[0].urgency);
     });
