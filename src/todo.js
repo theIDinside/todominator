@@ -7,8 +7,8 @@ const {
 const vscode = require("vscode");
 /** @typedef {string} Path */
 let NB_IDS = 0;
-const IDENTIFIERS_REGEX = [/TODO/g, /FIXME/g, /BUG/g, /FEATURE_REQUEST/g];
-const IDENTIFIERS = ["TODO", "FIXME", "BUG", "FEATURE_REQUEST"];
+const IDENTIFIERS_REGEX = [/TODO/g, /FIXME/g, /BUG/g, /FEATURE/g];
+const IDENTIFIERS = ["TODO", "FIXME", "BUG", "FEATURE"];
 const NotaBeneType = {
   TODO: 0,
   FIXME: 1,
@@ -25,7 +25,7 @@ class NotaBene extends TreeItem {
   /** @type {string} */
   owner;
   /** @type {string} */
-  description;
+  description_;
   /** @type {number} */
   urgency;
   /** @type {string} */
@@ -58,7 +58,7 @@ class NotaBene extends TreeItem {
     this.type = IDENTIFIERS[type];
     this.type_id = type;
     let sub = description.substring(0, description.indexOf(" "));
-    this.label = `${owner}:${sub} - [${line}:${col}]`;
+    this.label = label;
     let cmd = {
       /** Title of the command, like `save`.*/
       title: "todominator.goto_nb",
@@ -310,11 +310,7 @@ function parse_nb(
     line_contents.indexOf(":", owner_end) + 1
   );
   let urgency_ = urgency(line_contents);
-  const label = `${IDENTIFIERS[type]}(${owner}): ${
-    description.length > 150
-      ? `${description.substring(0, 90)}...`
-      : description
-  }`;
+  const label = `${IDENTIFIERS[type]}(${owner}):`;
   let res = new NotaBene(
     label,
     line_number,
