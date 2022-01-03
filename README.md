@@ -1,7 +1,7 @@
 # todominator README
 
-Simple extension that keeps a record / tracks todo()'s, bug()'s, fixme()'s and feature_request()'s in the source code.
+Simple extension that keeps a record / tracks todo()'s, bug()'s, fixme()'s and feature_request()'s in the source code and displays them in a handy manner.
 
-For now, it just parses the file in a rudimentary way. But tests seem to suggest it works.
+This is WIP.
 
-The backend is functional, now it only needs to be displayed somehow.
+![Here's an example of what it looks like](use_case.gif)
