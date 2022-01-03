@@ -77,7 +77,7 @@ class ParsedFile {
     return this.#filehash;
   }
 
-  async nota_benes() {
+  nota_benes() {
     return this.#nbs;
   }
 }
@@ -91,35 +91,34 @@ class NotaBenes {
     this.#nbs = new Map();
   }
 
-  async parse_file(path) {
+  parse_file(path) {
     const fs = require("fs");
     let previous = this.#nbs.get(path);
 
     if (previous) {
-      let previous_result = await previous;
-      this.#nbs.set(
-        path,
-        fs.promises
-          .readFile(path, { encoding: "utf8", flag: "r" })
-          .then(async (file_contents) => {
-            let sum = hasher.update(file_contents);
+      previous.then((previous_result) => {
+        let promise = new Promise((resolve, reject) => {
+          fs.readFile(path, { encoding: "utf8", flag: "r" }, (err, data) => {
+            if (err) reject(err);
+            let sum = hasher.update(data);
             if (sum != previous_result.hash_sum) {
-              return new ParsedFile(parse_file(file_contents), sum);
+              resolve(new ParsedFile(parse_file(data), sum));
             } else {
-              return previous_result;
+              resolve(previous_result);
             }
-          })
-      );
+          });
+        });
+        this.#nbs.set(path, promise);
+      });
     } else {
-      this.#nbs.set(
-        path,
-        fs.promises
-          .readFile(path, { encoding: "utf8", flag: "r" })
-          .then(async (file_contents) => {
-            let sum = hasher.update(file_contents);
-            return new ParsedFile(parse_file(file_contents), sum);
-          })
-      );
+      let promise = new Promise((resolve, reject) => {
+        fs.readFile(path, { encoding: "utf8", flag: "r" }, (err, data) => {
+          if (err) reject(err);
+          let sum = hasher.update(data);
+          resolve(new ParsedFile(parse_file(data), sum));
+        });
+      });
+      this.#nbs.set(path, promise);
     }
   }
 
@@ -194,8 +193,7 @@ async function parse_file(contents) {
     file_offset += line.length + 1;
     line_number++;
   }
-  let res = await Promise.all(parses);
-  return res;
+  return parses;
 }
 
 /**
@@ -203,7 +201,7 @@ async function parse_file(contents) {
  * @param { {file_offset: number, line_number: number, column: number, type: number } } info
  * @param { string } line_contents
  */
-async function parse_nb(info, line_contents) {
+function parse_nb(info, line_contents) {
   const urgency = (str) => {
     const re = /!/g;
     return ((str || "").match(re) || []).length;
