@@ -27,13 +27,28 @@
 			{
 				"command": "todominator.parse_file",
 				"title": "Scan file for todo's"
+			},
+			{
+				"command": "todominator.goto_nb",
+				"title": "Go to where N.B. has been defined"
 			}
 		],
+		"viewsContainers": {
+			"panel": [
+				{
+					"id": "todominator",
+					"title": "Todo's",
+					"icon": "foo"
+				}
+			]
+		},
 		"views": {
-			"explorer": [{
-				"id": "todominator",
-				"name": "Todo's in code"
-			}]
+			"todominator": [
+				{
+					"id": "todominator-list",
+					"name": "todominator"
+				}
+			]
 		},
 		"configuration": [
 			{

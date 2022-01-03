@@ -1,3 +1,4 @@
+pub mod foo;
 pub fn foo() {
     println!("foo!");
 }

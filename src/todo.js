@@ -1,3 +1,12 @@
+const {
+  TreeItem,
+  TreeItemCollapsibleState,
+  MarkdownString,
+  Command,
+} = require("vscode");
+const vscode = require("vscode");
+/** @typedef {string} Path */
+let NB_IDS = 0;
 const IDENTIFIERS_REGEX = [/TODO/g, /FIXME/g, /BUG/g, /FEATURE_REQUEST/g];
 const IDENTIFIERS = ["TODO", "FIXME", "BUG", "FEATURE_REQUEST"];
 const NotaBeneType = {
@@ -7,89 +16,130 @@ const NotaBeneType = {
   FREQ: 3,
 };
 
-class NotaBene {
+class NotaBene extends TreeItem {
+  _id;
   /** @type {number} */
-  #line;
+  line;
   /** @type {number} */
-  #column;
+  column;
   /** @type {string} */
-  #owner;
+  owner;
   /** @type {string} */
-  #description;
+  description;
   /** @type {number} */
-  #urgency;
+  urgency;
+  /** @type {string} */
+  type;
   /** @type {number} */
-  #type;
+  type_id;
+  /** @type {string} */
+  label;
+
+  /** @type {Command} */
+  command;
+
   /**
-   *
    * @param {number} line
    * @param {number} col
    * @param {string} owner
    * @param {string} description
    * @param {number} urgency
    * @param {number} type
+   * @param {string} path
    */
-  constructor(line, col, owner, description, urgency, type) {
-    this.#line = line;
-    this.#column = col;
-    this.#owner = owner;
-    this.#description = description;
-    this.#urgency = urgency;
-    this.#type = type;
+  constructor(label, line, col, owner, description, urgency, type, path) {
+    super(label, TreeItemCollapsibleState.None);
+    this._id = NB_IDS++;
+    this.line = line;
+    this.column = col;
+    this.owner = owner;
+    this.description = description;
+    this.urgency = urgency;
+    this.type = IDENTIFIERS[type];
+    this.type_id = type;
+    let sub = description.substring(0, description.indexOf(" "));
+    this.label = `${owner}:${sub} - [${line}:${col}]`;
+    let cmd = {
+      /** Title of the command, like `save`.*/
+      title: "todominator.goto_nb",
+      /** * The identifier of the actual command handler */
+      command: "todominator.goto_nb",
+      /** A tooltip for the command, when represented in the UI. */
+      tooltip: "Go to N.B.",
+      /** * Arguments that the command handler should be invoked with. */
+      arguments: [path, line],
+    };
+    this.command = cmd;
+    this.path = path;
   }
-
-  get owner() {
-    return this.#owner;
-  }
-  get col() {
-    return this.#column;
-  }
-  get line() {
-    return this.#line;
-  }
-  get description() {
-    return this.#description;
-  }
-  get urgency() {
-    return this.#urgency;
-  }
-
-  get type_id() {
-    return this.#type;
-  }
-
-  get type() {
-    return IDENTIFIERS[this.#type];
+  isRoot() {
+    return false;
   }
 }
 
-class ParsedFile {
+/**
+ * @param {string} path
+ * @returns {string}
+ */
+function make_label(path) {
+  let last_slash = path.lastIndexOf("/");
+  if (last_slash == -1) {
+    return path;
+  }
+  let sub = path.substring(0, last_slash);
+  let last_slash_2 = sub.lastIndexOf("/");
+  if (last_slash_2 == -1) return path;
+  return path.substring(last_slash_2);
+}
+
+class ParsedFile extends TreeItem {
   /** @type {Promise<NotaBene[]>} */
   #nbs;
   // for a quick comparison of a file, so we don't have to reparse (since the built in hash, is faster)
   #filehash;
-  constructor(nbs, filehash) {
+  path;
+  /**
+   *
+   * @param {string} path
+   * @param {Promise<NotaBene[]>} nbs
+   * @param {number} filehash
+   */
+  constructor(path, nbs, filehash) {
+    super(make_label(path), TreeItemCollapsibleState.Collapsed);
     this.#nbs = nbs;
     this.#filehash = filehash;
+    this.path = path;
   }
 
   get hash_sum() {
     return this.#filehash;
   }
 
-  nota_benes() {
+  async nota_benes() {
     return this.#nbs;
+  }
+
+  async get_by_label(label) {
+    let nbs = await this.#nbs;
+    return nbs.find((nb) => nb.label == label);
+  }
+
+  isRoot() {
+    return true;
   }
 }
 
 class NotaBenes {
-  /** @typedef {string} Path */
   // The founds t_odos.
   /** @type { Map<Path, Promise<ParsedFile>> } */
   #nbs;
   constructor() {
     this.#nbs = new Map();
   }
+  /** @type {Map<number, Path>} */
+  id_to_path = new Map();
+  /** @type {Map<Path, number>} */
+  path_found = new Map();
   // feature_request(simon): perhaps; this should be offloaded to native code, that could potentially handle this alot faster, via multi threading
   parse_file(path) {
     const fs = require("fs");
@@ -102,7 +152,13 @@ class NotaBenes {
             if (err) reject(err);
             let sum = data.length;
             if (sum != previous_result.hash_sum) {
-              resolve(new ParsedFile(parse_file(data), sum));
+              resolve(
+                new ParsedFile(
+                  path,
+                  parse_file(this.path_found, path, data),
+                  sum
+                )
+              );
             } else {
               resolve(previous_result);
             }
@@ -115,7 +171,9 @@ class NotaBenes {
         fs.readFile(path, { encoding: "utf8", flag: "r" }, (err, data) => {
           if (err) reject(err);
           let sum = data.length;
-          resolve(new ParsedFile(parse_file(data), sum));
+          resolve(
+            new ParsedFile(path, parse_file(this.path_found, path, data), sum)
+          );
         });
       });
       this.#nbs.set(path, promise);
@@ -124,6 +182,10 @@ class NotaBenes {
 
   async get_all_in(file_name) {
     return this.#nbs.get(file_name);
+  }
+
+  all() {
+    return [...this.#nbs.entries()];
   }
 
   async #get_filtered(file_name, type_id) {
@@ -155,9 +217,31 @@ class NotaBenes {
   async get_bugs(file_name) {
     return this.#get_filtered(file_name, NotaBeneType.BUG);
   }
+
+  file_is_recorded(path) {
+    return (this.path_found.get(path) ?? 0) != 0;
+  }
+
+  async getTreeViewRoots() {
+    let result = [];
+    for (let entry of this.#nbs) {
+      let p = await entry[1];
+      let nbs = await p.nota_benes();
+      if (nbs.length != 0) {
+        result.push(p);
+      }
+    }
+    return result;
+  }
 }
 
-async function parse_file(contents) {
+/**
+ * @param {Map<Path, number>} path_count_map
+ * @param {string} path
+ * @param {string} contents
+ * @returns
+ */
+async function parse_file(path_count_map, path, contents) {
   const is_comment = (line) => {
     return line.indexOf("//") != -1 || line.indexOf("/*") != -1;
   };
@@ -185,8 +269,12 @@ async function parse_file(contents) {
           line_number: line_number,
           column: column,
           type: type,
+          path: path,
         };
-        parses.push(parse_nb(lexing, line));
+        let nb = parse_nb(lexing, line);
+        let count = (path_count_map.get(path) ?? 0) + 1;
+        path_count_map.set(path, count);
+        parses.push(nb);
       }
     }
     // remember, we have to add the newline character to the length
@@ -219,17 +307,23 @@ function parse_nb(info, line_contents) {
     line_contents.indexOf(":", owner_end) + 1
   );
   let urgency_ = urgency(line_contents);
+  let sub = description.substring(0, description.indexOf(" "));
+  let label = `${owner.trim()}:${sub} - [${info.line_number}:${info.column}]`;
   let res = new NotaBene(
+    label,
     info.line_number,
     info.column,
     owner.trim(),
     description.trim(),
     urgency_,
-    info.type
+    info.type,
+    info.path
   );
   return res;
 }
 
 module.exports = {
   NotaBenes,
+  NotaBene,
+  ParsedFile,
 };

@@ -1,34 +1,34 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-
 const {
   commands,
   window,
   workspace,
   TextDocumentSaveReason,
+  Selection,
 } = require("vscode");
 const { NotaBenes } = require("./src/todo");
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+const { NotaBeneTreeDataProvider } = require("./src/todoTreeDataProvider");
+
+let NBS = new NotaBenes();
 
 /**
  * @param { import ("vscode").ExtensionContext } context
  */
 function activate(context) {
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with  registerCommand
-  // The commandId parameter must match the command field in package.json
-  console.log(`activation of todominator ongoing`);
+  const rootPath =
+    workspace.workspaceFolders && workspace.workspaceFolders.length > 0
+      ? workspace.workspaceFolders[0].uri.fsPath
+      : undefined;
+  let treeDataProvider = new NotaBeneTreeDataProvider(NBS, rootPath);
+
+  window.registerTreeDataProvider("todominator", treeDataProvider);
   context.subscriptions.push(
     workspace.onDidSaveTextDocument((td) => {
       const configuration = workspace.getConfiguration("todominator");
       const parseOnSave = configuration.get("parse_on_save");
-
-      console.log(
-        `did save ${td.uri.fsPath}. Running todominator parse: ${
-          parseOnSave ?? false
-        }`
-      );
+      if (parseOnSave) {
+        NBS.parse_file(td.uri.fsPath);
+        treeDataProvider.refresh();
+      }
     })
   );
   context.subscriptions.push(
@@ -41,8 +41,39 @@ function activate(context) {
     })
   );
 
-  let disposable = commands.registerCommand(
-    "todominator.helloWorld",
+  let parse_file_cmd = commands.registerCommand(
+    "todominator.parse_file",
+    async () => {
+      let files = await getSourceFiles();
+      window.showQuickPick(files).then((sourceFilePath) => {
+        NBS.parse_file(sourceFilePath);
+        treeDataProvider.refresh();
+      });
+      // The code you place here will be executed every time your command is executed
+
+      // Display a message box to the user
+      window.showInformationMessage("Hello World from todominator!");
+    }
+  );
+
+  let goto_nb_cmd = commands.registerCommand(
+    `todominator.goto_nb`,
+    async (path, line) => {
+      let doc = await workspace.openTextDocument(path);
+      let editor = await window.showTextDocument(doc);
+      let range = editor.document.lineAt(line - 1).range;
+      const position = editor.selection.active;
+
+      editor.selection = new Selection(
+        position.with(line - 1),
+        position.with(line - 1)
+      );
+      editor.revealRange(range);
+    }
+  );
+
+  let parse_ws_cmd = commands.registerCommand(
+    "todominator.parse_workspace",
     function () {
       // The code you place here will be executed every time your command is executed
 
@@ -50,9 +81,20 @@ function activate(context) {
       window.showInformationMessage("Hello World from todominator!");
     }
   );
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(parse_file_cmd, parse_ws_cmd, goto_nb_cmd);
 
-  // window.createTreeView("todominator", { treeDataProvider: aNodeWithIdTreeDataProvider(), showCollapseAll: true, canSelectMany: false }));
+  let tv = window.createTreeView("todominator-list", {
+    treeDataProvider: treeDataProvider,
+    showCollapseAll: true,
+    canSelectMany: false,
+  });
+}
+
+async function getSourceFiles() {
+  let files = workspace.findFiles("**/*.rs");
+  return files.then((res) => {
+    return res.map((uri) => uri.fsPath);
+  });
 }
 
 // this method is called when your extension is deactivated
