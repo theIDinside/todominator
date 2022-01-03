@@ -286,10 +286,13 @@ async function parse_file(path_count_map, path, contents) {
 
 /**
  *
- * @param { {file_offset: number, line_number: number, column: number, type: number } } info
+ * @param { {file_offset: number, line_number: number, column: number, type: number, path: string} } info
  * @param { string } line_contents
  */
-function parse_nb(info, line_contents) {
+function parse_nb(
+  { file_offset, line_number, column, type, path },
+  line_contents
+) {
   const urgency = (str) => {
     const re = /!/g;
     return ((str || "").match(re) || []).length;
@@ -300,24 +303,27 @@ function parse_nb(info, line_contents) {
   // feature_request(simon)!!!!: display the nota bene's in a nice list in vscode
   let owner_end = line_contents.indexOf(")");
   let owner = line_contents.substring(
-    info.column + IDENTIFIERS[info.type].length + 1,
+    column + IDENTIFIERS[type].length + 1,
     owner_end
   );
   let description = line_contents.substring(
     line_contents.indexOf(":", owner_end) + 1
   );
   let urgency_ = urgency(line_contents);
-  let sub = description.substring(0, description.indexOf(" "));
-  let label = `${owner.trim()}:${sub} - [${info.line_number}:${info.column}]`;
+  const label = `${IDENTIFIERS[type]}(${owner}): ${
+    description.length > 150
+      ? `${description.substring(0, 90)}...`
+      : description
+  }`;
   let res = new NotaBene(
     label,
-    info.line_number,
-    info.column,
+    line_number,
+    column,
     owner.trim(),
     description.trim(),
     urgency_,
-    info.type,
-    info.path
+    type,
+    path
   );
   return res;
 }

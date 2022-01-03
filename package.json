@@ -45,7 +45,7 @@
 		"views": {
 			"todominator": [
 				{
-					"id": "todominator-list",
+					"id": "todominator",
 					"name": "todominator"
 				}
 			]

@@ -20,6 +20,12 @@ function activate(context) {
       : undefined;
   let treeDataProvider = new NotaBeneTreeDataProvider(NBS, rootPath);
 
+  let tv = window.createTreeView("todominator", {
+    treeDataProvider: treeDataProvider,
+    showCollapseAll: true,
+    canSelectMany: false,
+  });
+
   window.registerTreeDataProvider("todominator", treeDataProvider);
   context.subscriptions.push(
     workspace.onDidSaveTextDocument((td) => {
@@ -49,10 +55,6 @@ function activate(context) {
         NBS.parse_file(sourceFilePath);
         treeDataProvider.refresh();
       });
-      // The code you place here will be executed every time your command is executed
-
-      // Display a message box to the user
-      window.showInformationMessage("Hello World from todominator!");
     }
   );
 
@@ -76,22 +78,15 @@ function activate(context) {
     "todominator.parse_workspace",
     function () {
       // The code you place here will be executed every time your command is executed
-
       // Display a message box to the user
       window.showInformationMessage("Hello World from todominator!");
     }
   );
   context.subscriptions.push(parse_file_cmd, parse_ws_cmd, goto_nb_cmd);
-
-  let tv = window.createTreeView("todominator-list", {
-    treeDataProvider: treeDataProvider,
-    showCollapseAll: true,
-    canSelectMany: false,
-  });
 }
 
 async function getSourceFiles() {
-  let files = workspace.findFiles("**/*.rs");
+  let files = workspace.findFiles("**/*.rs", "**/node_modules/**");
   return files.then((res) => {
     return res.map((uri) => uri.fsPath);
   });
