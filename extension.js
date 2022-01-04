@@ -36,7 +36,9 @@ async function* getAllFolders(dir, ...ignores) {
  * @param { import ("vscode").ExtensionContext } context
  */
 function activate(context) {
-  gitToJs("./").then((result) => {
+  gitToJs(workspace.workspaceFolders[0].uri.fsPath).then((result) => {
+    // todo(simon): this is where we update to "current" truth
+    // todo(simon): first, we must build an "origin" truth, serialize it, deserialize that, and compare to the commits, this function gets us
     console.log(JSON.stringify(result, null, 2));
   });
   const rootPath =
