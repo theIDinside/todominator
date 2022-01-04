@@ -9,6 +9,8 @@ const { NotaBenes } = require("./src/todo");
 const { NotaBeneTreeDataProvider } = require("./src/todoTreeDataProvider");
 const { readFile, stat } = require("fs");
 
+const { gitToJs } = require("git-parse");
+
 let NBS = new NotaBenes();
 
 const { resolve } = require("path");
@@ -22,14 +24,11 @@ async function* getAllFolders(dir, ...ignores) {
     let component = res.substring(curr.length);
     if (!ignores.some((v) => component.includes(v))) {
       if (directoryEntry.isDirectory()) {
-        // if we're a directory, return another iterator (or "async iterator")
         yield* getAllFolders(res, ...ignores);
-        // when recursive iterator has been exhausted, yield "this" directory
         yield res;
       }
     }
   }
-  // when all subdir async dirs been exhausted, return the provided dir
   return dir;
 }
 
@@ -37,6 +36,9 @@ async function* getAllFolders(dir, ...ignores) {
  * @param { import ("vscode").ExtensionContext } context
  */
 function activate(context) {
+  gitToJs("./").then((result) => {
+    console.log(JSON.stringify(result, null, 2));
+  });
   const rootPath =
     workspace.workspaceFolders && workspace.workspaceFolders.length > 0
       ? workspace.workspaceFolders[0].uri.fsPath

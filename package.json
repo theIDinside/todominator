@@ -93,5 +93,7 @@
 		"mocha": "^9.1.1",
 		"typescript": "^4.4.3"
 	},
-	"dependencies": {}
+	"dependencies": {
+		"git-parse": "^2.1.0"
+	}
 }
