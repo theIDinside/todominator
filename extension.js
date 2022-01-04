@@ -7,9 +7,31 @@ const {
 } = require("vscode");
 const { NotaBenes } = require("./src/todo");
 const { NotaBeneTreeDataProvider } = require("./src/todoTreeDataProvider");
-const { readFile, readdir, stat } = require("fs");
+const { readFile, stat } = require("fs");
 
 let NBS = new NotaBenes();
+
+const { resolve } = require("path");
+const { readdir } = require("fs").promises;
+
+async function* getAllFolders(dir, ...ignores) {
+  const curr = resolve(dir);
+  const directoryEntries = await readdir(dir, { withFileTypes: true });
+  for (const directoryEntry of directoryEntries) {
+    const res = resolve(dir, directoryEntry.name);
+    let component = res.substring(curr.length);
+    if (!ignores.some((v) => component.includes(v))) {
+      if (directoryEntry.isDirectory()) {
+        // if we're a directory, return another iterator (or "async iterator")
+        yield* getAllFolders(res, ...ignores);
+        // when recursive iterator has been exhausted, yield "this" directory
+        yield res;
+      }
+    }
+  }
+  // when all subdir async dirs been exhausted, return the provided dir
+  return dir;
+}
 
 /**
  * @param { import ("vscode").ExtensionContext } context
@@ -77,27 +99,47 @@ function activate(context) {
 
   let parse_ws_cmd = commands.registerCommand(
     "todominator.parse_workspace",
-    function () {
-      // The code you place here will be executed every time your command is executed
-      // Display a message box to the user
-      window.showInformationMessage("Hello World from todominator!");
+    async () => {
+      for await (const directory of getAllFolders(
+        workspace.workspaceFolders[0].uri.fsPath,
+        "node_modules",
+        "target"
+      )) {
+        const filesFilter = `**${directory.slice(
+          workspace.workspaceFolders[0].uri.fsPath.length
+        )}/*.*`;
+        let filesPromise = workspace.findFiles(filesFilter);
+        filesPromise.then((files) => {
+          for (const strPath of files.map((uri) => uri.fsPath)) {
+            console.log(`parsing: ${strPath}`);
+            NBS.parse_file(strPath);
+          }
+          treeDataProvider.refresh();
+        });
+      }
     }
   );
 
   let parse_workspace_folder = commands.registerCommand(
     "todominator.parse_workspace_folder",
-    function (folder) {
-      const filesFilter = `**${folder.path.substring(
-        folder.path.lastIndexOf("/")
-      )}/*.*`;
-      let filesPromise = workspace.findFiles(filesFilter, "**/node_modules/**");
-      filesPromise.then((files) => {
-        for (const strPath of files.map((uri) => uri.fsPath)) {
-          console.log(`parsing: ${strPath}`);
-          NBS.parse_file(strPath);
-        }
-        treeDataProvider.refresh();
-      });
+    async (folder) => {
+      for (const dir of getAllFolders(
+        `${folder.path}`,
+        "node_modules",
+        "target"
+      )) {
+        dir.then((directory) => {
+          const filesFilter = `**${directory}/*.*`;
+          let filesPromise = workspace.findFiles(filesFilter);
+          filesPromise.then((files) => {
+            for (const strPath of files.map((uri) => uri.fsPath)) {
+              console.log(`parsing: ${strPath}`);
+              NBS.parse_file(strPath);
+            }
+            treeDataProvider.refresh();
+          });
+        });
+      }
     }
   );
 
@@ -110,7 +152,10 @@ function activate(context) {
 }
 
 async function getSourceFiles() {
-  let files = workspace.findFiles("**/*.rs", "**/node_modules/**");
+  let files = workspace.findFiles(
+    "**/*.rs",
+    "{**/node_modules/**, **/target/debug/**, **/target/release/**}"
+  );
   return files.then((res) => {
     return res.map((uri) => uri.fsPath);
   });
