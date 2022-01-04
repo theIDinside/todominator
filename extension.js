@@ -7,6 +7,7 @@ const {
 } = require("vscode");
 const { NotaBenes } = require("./src/todo");
 const { NotaBeneTreeDataProvider } = require("./src/todoTreeDataProvider");
+const { readFile, readdir, stat } = require("fs");
 
 let NBS = new NotaBenes();
 
@@ -82,7 +83,30 @@ function activate(context) {
       window.showInformationMessage("Hello World from todominator!");
     }
   );
-  context.subscriptions.push(parse_file_cmd, parse_ws_cmd, goto_nb_cmd);
+
+  let parse_workspace_folder = commands.registerCommand(
+    "todominator.parse_workspace_folder",
+    function (folder) {
+      const filesFilter = `**${folder.path.substring(
+        folder.path.lastIndexOf("/")
+      )}/*.*`;
+      let filesPromise = workspace.findFiles(filesFilter, "**/node_modules/**");
+      filesPromise.then((files) => {
+        for (const strPath of files.map((uri) => uri.fsPath)) {
+          console.log(`parsing: ${strPath}`);
+          NBS.parse_file(strPath);
+        }
+        treeDataProvider.refresh();
+      });
+    }
+  );
+
+  context.subscriptions.push(
+    parse_file_cmd,
+    parse_ws_cmd,
+    goto_nb_cmd,
+    parse_workspace_folder
+  );
 }
 
 async function getSourceFiles() {

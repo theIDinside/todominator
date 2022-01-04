@@ -19,10 +19,21 @@
 	],
 	"main": "./extension.js",
 	"contributes": {
+		"menus": {
+			"explorer/context": [
+				{
+					"command": "todominator.parse_workspace_folder"
+				}
+			]
+		},
 		"commands": [
 			{
 				"command": "todominator.parse_workspace",
 				"title": "Scan workspace for todo's (possibly expensive)"
+			},
+			{
+				"command": "todominator.parse_workspace_folder",
+				"title": "Scan folder & parse files"
 			},
 			{
 				"command": "todominator.parse_file",

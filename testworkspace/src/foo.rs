@@ -3,3 +3,5 @@ pub struct Foo {
     bar: u32,
     baz: i32,
 }
+
+// todo(simon): add some more types here
