@@ -15,11 +15,7 @@ class NotaBeneTreeDataProvider {
   }
 
   refresh() {
-    try {
-      this._onDidChangeTreeData.fire();
-    } catch (err) {
-      console.log(`event listener _onDidChangeTreeData not found: ${err}`);
-    }
+    this._onDidChangeTreeData.fire();
   }
 
   /**
