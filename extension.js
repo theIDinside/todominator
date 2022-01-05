@@ -7,40 +7,45 @@ const {
 } = require("vscode");
 const { NotaBenes } = require("./src/todo");
 const { NotaBeneTreeDataProvider } = require("./src/todoTreeDataProvider");
-const { readFile, stat } = require("fs");
-
-const { gitToJs } = require("git-parse");
+const { parseFolder, getFolders } = require("./src/utils");
+// const { gitToJs } = require("git-parse");
 
 let NBS = new NotaBenes();
-
-const { resolve } = require("path");
-const { readdir } = require("fs").promises;
-
-async function* getAllFolders(dir, ...ignores) {
-  const curr = resolve(dir);
-  const directoryEntries = await readdir(dir, { withFileTypes: true });
-  for (const directoryEntry of directoryEntries) {
-    const res = resolve(dir, directoryEntry.name);
-    let component = res.substring(curr.length);
-    if (!ignores.some((v) => component.includes(v))) {
-      if (directoryEntry.isDirectory()) {
-        yield* getAllFolders(res, ...ignores);
-        yield res;
-      }
-    }
-  }
-  return dir;
-}
 
 /**
  * @param { import ("vscode").ExtensionContext } context
  */
 function activate(context) {
+  /*
   gitToJs(workspace.workspaceFolders[0].uri.fsPath).then((result) => {
     // todo(simon): this is where we update to "current" truth
     // todo(simon): first, we must build an "origin" truth, serialize it, deserialize that, and compare to the commits, this function gets us
     console.log(JSON.stringify(result, null, 2));
   });
+  */
+
+  const requestSettings = async () => {
+    const configuration = workspace.getConfiguration("todominator");
+    let folder_ignores = configuration.get("folder-ignores");
+    let file_extensions = configuration.get("file-extensions-to-parse");
+    if (!folder_ignores) {
+      let tmp = await window.showInputBox({
+        title: "Write space separated list of folders to ignore",
+        prompt: "/path/ignore1 /other/path/ignore2",
+      });
+      folder_ignores = tmp.split(" ");
+    }
+
+    if (!file_extensions) {
+      let tmp = await window.showInputBox({
+        title: "Write space separated list of file extensions to parse",
+        prompt: "rs cpp c hpp h",
+      });
+      file_extensions = tmp.split(" ");
+    }
+    return { folder_ignores, file_extensions };
+  };
+
   const rootPath =
     workspace.workspaceFolders && workspace.workspaceFolders.length > 0
       ? workspace.workspaceFolders[0].uri.fsPath
@@ -104,22 +109,14 @@ function activate(context) {
   let parse_ws_cmd = commands.registerCommand(
     "todominator.parse_workspace",
     async () => {
-      for await (const directory of getAllFolders(
+      let { folder_ignores, file_extensions } = await requestSettings();
+      for await (const directory of getFolders(
         workspace.workspaceFolders[0].uri.fsPath,
-        "node_modules",
-        "target"
+        folder_ignores
       )) {
-        const filesFilter = `**${directory.slice(
-          workspace.workspaceFolders[0].uri.fsPath.length
-        )}/*.*`;
-        let filesPromise = workspace.findFiles(filesFilter);
-        filesPromise.then((files) => {
-          for (const strPath of files.map((uri) => uri.fsPath)) {
-            console.log(`parsing: ${strPath}`);
-            NBS.parse_file(strPath);
-          }
-          treeDataProvider.refresh();
-        });
+        console.log(`parsing folder: ${directory}`);
+        await NBS.insert_parsed(parseFolder(directory, file_extensions));
+        treeDataProvider.refresh();
       }
     }
   );
@@ -127,22 +124,11 @@ function activate(context) {
   let parse_workspace_folder = commands.registerCommand(
     "todominator.parse_workspace_folder",
     async (folder) => {
-      for (const dir of getAllFolders(
-        `${folder.path}`,
-        "node_modules",
-        "target"
-      )) {
-        dir.then((directory) => {
-          const filesFilter = `**${directory}/*.*`;
-          let filesPromise = workspace.findFiles(filesFilter);
-          filesPromise.then((files) => {
-            for (const strPath of files.map((uri) => uri.fsPath)) {
-              console.log(`parsing: ${strPath}`);
-              NBS.parse_file(strPath);
-            }
-            treeDataProvider.refresh();
-          });
-        });
+      let { folder_ignores, file_extensions } = await requestSettings();
+      for await (const dir of getFolders(`${folder.path}`, folder_ignores)) {
+        console.log(`parsing folder: ${dir}`);
+        await NBS.insert_parsed(parseFolder(dir, file_extensions));
+        treeDataProvider.refresh();
       }
     }
   );

@@ -1,9 +1,4 @@
-const {
-  TreeItem,
-  TreeItemCollapsibleState,
-  MarkdownString,
-  Command,
-} = require("vscode");
+const { TreeItem, TreeItemCollapsibleState } = require("vscode");
 const vscode = require("vscode");
 /** @typedef {string} Path */
 let NB_IDS = 0;
@@ -35,7 +30,7 @@ class NotaBene extends TreeItem {
   /** @type {string} */
   label;
 
-  /** @type {Command} */
+  /** @type {import("vscode").Command} */
   command;
 
   /**
@@ -180,6 +175,21 @@ class NotaBenes {
     }
   }
 
+  async insert_parsed(waiting_parsed) {
+    await waiting_parsed.then(
+      (/** @type {ParsedFile[]}*/ arrayOfParsedFiles) => {
+        for (let pf of arrayOfParsedFiles) {
+          this.#nbs.set(
+            pf.path,
+            new Promise((resolve, reject) => {
+              resolve(pf);
+            })
+          );
+        }
+      }
+    );
+  }
+
   async get_all_in(file_name) {
     return this.#nbs.get(file_name);
   }
@@ -285,6 +295,52 @@ async function parse_file(path_count_map, path, contents) {
 }
 
 /**
+ * @param {string} path
+ * @param {string} contents
+ * @returns
+ */
+async function parseFile(path, contents) {
+  const is_comment = (line) => {
+    return line.indexOf("//") != -1 || line.indexOf("/*") != -1;
+  };
+
+  const contains_identifier = (line) => {
+    let type = 0;
+    for (const ident of IDENTIFIERS) {
+      let pos = line.toUpperCase().indexOf(ident);
+      if (pos != -1) return { type: type, column: pos };
+      type += 1;
+    }
+    return { type: -1, column: -1 };
+  };
+
+  let parses = [];
+  let file_offset = 0;
+  let line_number = 1;
+  for (const line of contents.split("\n")) {
+    if (is_comment(line)) {
+      const { type, column } = contains_identifier(line);
+      if (type != -1) {
+        let lexing = {
+          // remember, we have to add the newline character to the length
+          file_offset: file_offset + column + (line_number - 1),
+          line_number: line_number,
+          column: column,
+          type: type,
+          path: path,
+        };
+        let nb = parse_nb(lexing, line);
+        parses.push(nb);
+      }
+    }
+    // remember, we have to add the newline character to the length
+    file_offset += line.length + 1;
+    line_number++;
+  }
+  return parses;
+}
+
+/**
  *
  * @param { {file_offset: number, line_number: number, column: number, type: number, path: string} } info
  * @param { string } line_contents
@@ -301,11 +357,18 @@ function parse_nb(
   // fixme(simon): maybe clean this code up
   // bug(simon): possible bug description
   // feature_request(simon)!!!!: display the nota bene's in a nice list in vscode
-  let owner_end = line_contents.indexOf(")");
-  let owner = line_contents.substring(
-    column + IDENTIFIERS[type].length + 1,
-    owner_end
-  );
+  let owner_end = column + IDENTIFIERS[type].length + 1;
+
+  let owner = "";
+  if (line_contents.charAt(column + IDENTIFIERS[type].length + 1) != "(") {
+    owner = "NONE";
+  } else {
+    owner_end = line_contents.indexOf(")");
+    owner = line_contents.substring(
+      column + IDENTIFIERS[type].length + 1,
+      owner_end
+    );
+  }
   let description = line_contents.substring(
     line_contents.indexOf(":", owner_end) + 1
   );
@@ -328,4 +391,5 @@ module.exports = {
   NotaBenes,
   NotaBene,
   ParsedFile,
+  parseFile,
 };

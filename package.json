@@ -10,12 +10,7 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:todominator.parse_workspace",
-		"onCommand:todominator.parse_file",
-		"onView:fileExplorer",
-		"onLanguage:rust",
-		"onLanguage:json",
-		"onLanguage:javascript"
+		"*"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -68,6 +63,16 @@
 					"todominator.parse_on_save": {
 						"type": "boolean",
 						"default": true
+					},
+					"todominator.folder-ignores": {
+						"type": "array",
+						"default": ["target/release", "target/debug", "build", "CMakeFiles", ".git", ".cmake"],
+						"description": "Folders to ignore"
+					},
+					"todominator.file-extensions-to-parse": {
+						"type": "array",
+						"default": ["rs", "cpp", "c", "h", "hpp", "js", "ts"],
+						"description": "File extensions of files of which N.B's should be parsed from"
 					}
 				}
 			}

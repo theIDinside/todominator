@@ -40,12 +40,8 @@ class NotaBeneTreeDataProvider {
   getTreeItem(key) {
     return key;
   }
-  /**
-   * @param {{key: string}} element
-   * @returns {{ key: string }}
-   */
   getParent({ key }) {
-    this.notabenes.id_to_path.get(key);
+    console.log("get parent? we have no use of get parent");
   }
 }
 
