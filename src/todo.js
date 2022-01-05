@@ -52,7 +52,6 @@ class NotaBene extends TreeItem {
     this.urgency = urgency;
     this.type = IDENTIFIERS[type];
     this.type_id = type;
-    let sub = description.substring(0, description.indexOf(" "));
     this.label = label;
     let cmd = {
       /** Title of the command, like `save`.*/
@@ -69,6 +68,19 @@ class NotaBene extends TreeItem {
   }
   isRoot() {
     return false;
+  }
+
+  serialize() {
+    let cloned = {
+      line: this.line,
+      column: this.column,
+      owner: this.owner,
+      description: this.description,
+      urgency: this.urgency,
+      type: this.type,
+      label: this.label,
+    };
+    return JSON.stringify(cloned);
   }
 }
 
