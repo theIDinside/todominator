@@ -282,9 +282,11 @@ async function parse_file(path_count_map, path, contents) {
           path: path,
         };
         let nb = parse_nb(lexing, line);
-        let count = (path_count_map.get(path) ?? 0) + 1;
-        path_count_map.set(path, count);
-        parses.push(nb);
+        if (nb != null) {
+          let count = (path_count_map.get(path) ?? 0) + 1;
+          path_count_map.set(path, count);
+          parses.push(nb);
+        }
       }
     }
     // remember, we have to add the newline character to the length
@@ -330,7 +332,9 @@ async function parseFile(path, contents) {
           path: path,
         };
         let nb = parse_nb(lexing, line);
-        parses.push(nb);
+        if (nb != null) {
+          parses.push(nb);
+        }
       }
     }
     // remember, we have to add the newline character to the length
@@ -343,7 +347,7 @@ async function parseFile(path, contents) {
 /**
  *
  * @param { {file_offset: number, line_number: number, column: number, type: number, path: string} } info
- * @param { string } line_contents
+ * @param { string | null } line_contents
  */
 function parse_nb(
   { file_offset, line_number, column, type, path },
@@ -360,18 +364,34 @@ function parse_nb(
   let owner_end = column + IDENTIFIERS[type].length + 1;
 
   let owner = "";
-  if (line_contents.charAt(column + IDENTIFIERS[type].length + 1) != "(") {
-    owner = "NONE";
+  let descriptionBegins = 0;
+
+  let accountForStupidSpaceSomePeopleWrite =
+    line_contents.charAt(column + IDENTIFIERS[type].length) == " "
+      ? column + IDENTIFIERS[type].length + 1
+      : column + IDENTIFIERS[type].length;
+
+  if (line_contents.charAt(accountForStupidSpaceSomePeopleWrite) != "(") {
+    owner = "NO OWNER";
+    if (line_contents.charAt(accountForStupidSpaceSomePeopleWrite) == ":") {
+      descriptionBegins = accountForStupidSpaceSomePeopleWrite + 1;
+    } else {
+      // means we've seen the word "bug" or "fixme" somewhere, without a ( after it, or without an : after it; thus, we should not treat this as a N.B.
+      return null;
+    }
   } else {
     owner_end = line_contents.indexOf(")");
+    if (line_contents.charAt(owner_end + 1) == ":") {
+      descriptionBegins = owner_end + 2;
+    } else {
+      descriptionBegins = owner_end + 1;
+    }
     owner = line_contents.substring(
       column + IDENTIFIERS[type].length + 1,
       owner_end
     );
   }
-  let description = line_contents.substring(
-    line_contents.indexOf(":", owner_end) + 1
-  );
+  let description = line_contents.substring(descriptionBegins);
   let urgency_ = urgency(line_contents);
   const label = `${IDENTIFIERS[type]}(${owner}):`;
   let res = new NotaBene(
