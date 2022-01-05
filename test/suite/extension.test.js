@@ -19,11 +19,11 @@ suite("Extension Test Suite", () => {
     });
   });
 
-  test("Test feature requests found is 1", async () => {
+  test("Test feature requests found is 2", async () => {
     let nb = new myExtension.NotaBenes();
     nb.parse_file(TODO_FILE);
     return nb.get_feature_requests(TODO_FILE).then((todos) => {
-      assert.strictEqual(todos.length, 1);
+      assert.strictEqual(todos.length, 2);
     });
   });
 
@@ -43,7 +43,7 @@ suite("Extension Test Suite", () => {
     });
   });
 
-  test("Test owner is simon of all 4", async () => {
+  test("Test owner is simon of all 5", async () => {
     let nb = new myExtension.NotaBenes();
     nb.parse_file(TODO_FILE);
     return nb.get_all_in(TODO_FILE).then(async (parsed_file) => {
@@ -55,7 +55,7 @@ suite("Extension Test Suite", () => {
       );
       assert.strictEqual(
         await parsed_file.nota_benes().then((nbs) => nbs.length),
-        4
+        5
       );
     });
   });
