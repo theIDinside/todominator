@@ -118,6 +118,7 @@ function activate(context) {
         await NBS.insert_parsed(parseFolder(directory, file_extensions));
         treeDataProvider.refresh();
       }
+      console.log(`Workspace parsing done.`);
     }
   );
 
