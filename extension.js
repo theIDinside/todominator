@@ -140,6 +140,25 @@ function activate(context) {
     goto_nb_cmd,
     parse_workspace_folder
   );
+
+  window
+    .showInformationMessage("Parse workspace for N.B.'s?", "yes", "no")
+    .then(async (res) => {
+      if (res == "yes") {
+        let { folder_ignores, file_extensions } = await requestSettings();
+        for await (const directory of getFolders(
+          workspace.workspaceFolders[0].uri.fsPath,
+          folder_ignores
+        )) {
+          console.log(`parsing folder: ${directory}`);
+          await NBS.insert_parsed(parseFolder(directory, file_extensions));
+          treeDataProvider.refresh();
+        }
+        console.log(`Workspace parsing done.`);
+      } else {
+        console.log(`Parsing workspace rejected`);
+      }
+    });
 }
 
 async function getSourceFiles() {
