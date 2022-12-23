@@ -15,15 +15,7 @@ let NBS = new NotaBenes();
 /**
  * @param { import ("vscode").ExtensionContext } context
  */
-function activate(context) {
-  /*
-  gitToJs(workspace.workspaceFolders[0].uri.fsPath).then((result) => {
-    // todo(simon): this is where we update to "current" truth
-    // todo(simon): first, we must build an "origin" truth, serialize it, deserialize that, and compare to the commits, this function gets us
-    console.log(JSON.stringify(result, null, 2));
-  });
-  */
-
+async function activate(context) {
   const requestSettings = async () => {
     const configuration = workspace.getConfiguration("todominator");
     let folder_ignores = configuration.get("folder-ignores");
@@ -106,31 +98,32 @@ function activate(context) {
     }
   );
 
-  let parse_ws_cmd = commands.registerCommand(
-    "todominator.parse_workspace",
-    async () => {
-      let { folder_ignores, file_extensions } = await requestSettings();
-      for await (const directory of getFolders(
-        workspace.workspaceFolders[0].uri.fsPath,
-        folder_ignores
-      )) {
-        console.log(`parsing folder: ${directory}`);
-        await NBS.insert_parsed(parseFolder(directory, file_extensions));
-        treeDataProvider.refresh();
-      }
-      console.log(`Workspace parsing done.`);
-    }
-  );
+	const parse_workspace_nbs = async() => {
+		const { folder_ignores, file_extensions } = await requestSettings();
+		const path = workspace.workspaceFolders[0].uri.fsPath;
+		let promises = []
+		for await (const dir of getFolders(path, folder_ignores)) {
+			console.log(`Parsing folder: ${dir}`);
+			promises.push(NBS.insert_parsed(parseFolder(dir, file_extensions)));
+		}
+		await Promise.all(promises);
+		treeDataProvider.refresh();
+		console.log("Done parsing workspace");
+	};
+
+  let parse_ws_cmd = commands.registerCommand("todominator.parse_workspace", parse_workspace_nbs);
 
   let parse_workspace_folder = commands.registerCommand(
     "todominator.parse_workspace_folder",
     async (folder) => {
       let { folder_ignores, file_extensions } = await requestSettings();
+			let promises = [];
       for await (const dir of getFolders(`${folder.path}`, folder_ignores)) {
         console.log(`parsing folder: ${dir}`);
-        await NBS.insert_parsed(parseFolder(dir, file_extensions));
-        treeDataProvider.refresh();
+        promises.push(NBS.insert_parsed(parseFolder(dir, file_extensions)));
       }
+			await Promise.all(promises);
+      treeDataProvider.refresh();
     }
   );
 
@@ -141,20 +134,11 @@ function activate(context) {
     parse_workspace_folder
   );
 
-  window
+  await window
     .showInformationMessage("Parse workspace for N.B.'s?", "yes", "no")
     .then(async (res) => {
       if (res == "yes") {
-        let { folder_ignores, file_extensions } = await requestSettings();
-        for await (const directory of getFolders(
-          workspace.workspaceFolders[0].uri.fsPath,
-          folder_ignores
-        )) {
-          console.log(`parsing folder: ${directory}`);
-          await NBS.insert_parsed(parseFolder(directory, file_extensions));
-          treeDataProvider.refresh();
-        }
-        console.log(`Workspace parsing done.`);
+				await parse_workspace_nbs();
       } else {
         console.log(`Parsing workspace rejected`);
       }
